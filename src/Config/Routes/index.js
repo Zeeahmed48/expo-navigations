@@ -8,19 +8,21 @@ import {
   DrawerItem,
 } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Entypo } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 //Screens
-import Home from '../../Views/Home';
-import Chat from '../../Views/Chat';
-import Profile from '../../Views/Profile';
 import Login from '../../Views/Auth/Login';
+import Home from '../../Views/Home';
+import Trips from '../../Views/Trips';
+import TripDetails from '../../Views/TripDetails';
+import DropOff from '../../Views/DropOff';
+import SelectCar from '../../Views/SelectCar';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
 const Routes = () => {
-  const [signedIn, setSignedIn] = useState(false);
+  const [signedIn, setSignedIn] = useState(true);
   const [userName, setUserName] = useState('');
   const [profilePic, setProfilePic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -38,47 +40,79 @@ const Routes = () => {
         // setUserName(userData.name);
         // setProfilePic(userData.picture.data.url);
         setSignedIn(true);
-        setIsLoading(false);
       }
+      setIsLoading(false);
     })();
   }, []);
 
   return (
-    <>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
       {!signedIn ? (
-        <AuthStack
-          setSignedIn={setSignedIn}
-          isLoading={isLoading}
-          setIsLoading={setIsLoading}
-        />
+        <Stack.Screen name='authstack'>
+          {() => (
+            <AuthStack
+              setSignedIn={setSignedIn}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
+            />
+          )}
+        </Stack.Screen>
       ) : (
-        <DrawerNavigator setSignedIn={setSignedIn} />
+        <Stack.Screen name='drawernavigator'>
+          {() => <DrawerNavigator setSignedIn={setSignedIn} />}
+        </Stack.Screen>
       )}
-    </>
+    </Stack.Navigator>
   );
 };
 
 const DrawerNavigator = ({ setSignedIn }) => {
   return (
     <Drawer.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: '#e2b052' },
+        headerTintColor: '#383838',
+        drawerStyle: {
+          backgroundColor: '#383838',
+          marginTop: 90,
+        },
+        drawerItemStyle: {
+          backgroundColor: 'rgb(99, 99, 99)',
+          margin: 0,
+          marginBottom: 20,
+          borderRadius: 0,
+        },
+        drawerLabelStyle: {
+          color: '#e2b052',
+        },
+      }}
       drawerContent={(props) => (
         <CustomDrawerContent {...props} setSignedIn={setSignedIn} />
       )}
     >
       <Drawer.Screen
         options={{
-          drawerIcon: () => <Entypo name='home' size={24} color='red' />,
+          title: 'Dashboard',
+          drawerIcon: () => (
+            <Icon name='view-dashboard' size={28} color='#e2b052' />
+          ),
         }}
-        name='Home'
-        component={Home}
+        name='DashboardStack'
+        component={DashboardStack}
       />
       <Drawer.Screen
         options={{
-          title: 'Profile',
-          drawerIcon: () => <FontAwesome name='user' size={24} color='red' />,
+          title: 'Trips',
+          drawerIcon: () => (
+            <FontAwesome name='user' size={28} color='#e2b052' />
+          ),
         }}
-        name='ProfileStack'
-        component={ProfileStack}
+        name='TripStack'
+        component={TripStack}
       />
     </Drawer.Navigator>
   );
@@ -121,14 +155,23 @@ const AuthStack = ({ setSignedIn, isLoading, setIsLoading }) => {
       </Stack.Screen>
     </Stack.Navigator>
   );
-  x;
 };
 
-const ProfileStack = () => {
+const DashboardStack = () => {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name='Profile' component={Profile} />
-      <Stack.Screen name='Chat' component={Chat} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name='dashboard' component={Home} />
+      <Stack.Screen name='dropoff' component={DropOff} />
+      <Stack.Screen name='selectcars' component={SelectCar} />
+    </Stack.Navigator>
+  );
+};
+
+const TripStack = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name='Trips' component={Trips} />
+      <Stack.Screen name='TripDetails' component={TripDetails} />
     </Stack.Navigator>
   );
 };

@@ -42,7 +42,7 @@ const Login = ({ setSignedIn, isLoading, setIsLoading }) => {
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <ActivityIndicator size='large' color='red' />
+        <ActivityIndicator size='large' color='#e2b052' />
       ) : (
         <TouchableOpacity style={styles.btn} onPress={loginWithFacebook}>
           <Text style={styles.btnText}>Login with facebook</Text>
@@ -59,7 +59,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btn: {
-    backgroundColor: 'red',
+    justifyContent: 'center',
+    backgroundColor: '#e2b052',
     paddingVertical: 10,
     paddingHorizontal: 15,
   },

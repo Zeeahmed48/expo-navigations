@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Chat = () => {
+const TripDetails = () => {
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.btn}>
-        <Text style={styles.btnText}>Hey!!!</Text>
+        <Text style={styles.btnText}>Trip Details</Text>
       </TouchableOpacity>
     </View>
   );
@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btn: {
-    backgroundColor: 'grey',
+    backgroundColor: '#e2b052',
     paddingVertical: 10,
     paddingHorizontal: 15,
   },
@@ -27,4 +27,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Chat;
+export default TripDetails;

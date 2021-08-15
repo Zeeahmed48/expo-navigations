@@ -1,14 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Profile = ({ navigation }) => {
+const Trips = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.btn}
-        onPress={() => navigation.navigate('Chat')}
+        onPress={() => navigation.navigate('TripDetails')}
       >
-        <Text style={styles.btnText}>Contact</Text>
+        <Text style={styles.btnText}>View Trip Details</Text>
       </TouchableOpacity>
     </View>
   );
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btn: {
-    backgroundColor: 'red',
+    backgroundColor: '#e2b052',
     paddingVertical: 10,
     paddingHorizontal: 15,
   },
@@ -30,4 +30,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Profile;
+export default Trips;
