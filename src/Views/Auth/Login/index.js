@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import * as Facebook from 'expo-facebook';
+import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ActivityIndicator,
@@ -8,30 +7,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { signInWithFacebook } from '../../../Config/Firebase';
 
 const Login = ({ setSignedIn, isLoading, setIsLoading }) => {
-  const loginWithFacebook = async () => {
+  const loginWithFacebook = async (loginType) => {
     try {
       setIsLoading(true);
-      await Facebook.initializeAsync({
-        appId: '328746008952558',
-      });
-      const { type, token, userId } =
-        await Facebook.logInWithReadPermissionsAsync({
-          permissions: ['public_profile'],
-        });
-      if (type === 'success') {
-        setSignedIn(true);
-        setIsLoading(false);
-        const dataForStorage = {
-          userId: userId,
-          token: token,
-        };
-        const jsonData = JSON.stringify(dataForStorage);
-        await AsyncStorage.setItem('userData', jsonData);
-      } else {
-        setSignedIn(false);
-        setIsLoading(false);
+      const { type, token } = await signInWithFacebook();
+      switch (type) {
+        case 'success': {
+          setSignedIn(true);
+          ///// SAVING TOKEN /////
+          await AsyncStorage.setItem('loginToken', token);
+        }
+        case 'cancel': {
+          setIsLoading(false);
+          setSignedIn(false);
+        }
       }
     } catch ({ message }) {
       alert(`Facebook Login Error: ${message}`);
@@ -44,9 +36,20 @@ const Login = ({ setSignedIn, isLoading, setIsLoading }) => {
       {isLoading ? (
         <ActivityIndicator size='large' color='#e2b052' />
       ) : (
-        <TouchableOpacity style={styles.btn} onPress={loginWithFacebook}>
-          <Text style={styles.btnText}>Login with facebook</Text>
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => loginWithFacebook('user')}
+          >
+            <Text style={styles.btnText}>Log in as user</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => loginWithFacebook('driver')}
+          >
+            <Text style={styles.btnText}>Log in as driver</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );

@@ -4,6 +4,8 @@ import * as Location from 'expo-location';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import CarMarker from '../../../assets/images/car_marker.png';
 import { MapStyle, styles } from './styles';
+import { storeLocation } from '../../Config/Firebase/index';
+import { geohashForLocation } from 'geofire-common';
 
 const Map = ({ region, setRegion, selected, status }) => {
   const clientId = 'VJIEZGBRDDZHMTMGJTHZYWL3L2URSSXNJV0VFNU0I2V1FFNA';
@@ -30,9 +32,20 @@ const Map = ({ region, setRegion, selected, status }) => {
       if (status === 'granted') {
         let location = await Location.getCurrentPositionAsync({});
         const {
-          coords: { latitude, longitude },
+          coords: { latitude: lat, longitude: lng },
         } = location;
-        setRegion({ ...region, latitude, longitude });
+        const hash = geohashForLocation([lat, lng]);
+        const storeData = {
+          geohash: hash,
+          lat,
+          lng,
+        };
+        try {
+          await storeLocation(undefined, storeData);
+        } catch (e) {
+          console.log('error occured while storing in database', e);
+        }
+        setRegion({ ...region, latitude: lat, longitude: lng });
       }
     })();
     // (async () => {
