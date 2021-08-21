@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { signInWithFacebook } from '../../../Config/Firebase';
 
-const Login = ({ setSignedIn, isLoading, setIsLoading }) => {
+const Login = ({ setSignedIn, isLoading, setIsLoading, navigation }) => {
   const loginWithFacebook = async (loginType) => {
     try {
       setIsLoading(true);

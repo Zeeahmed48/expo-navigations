@@ -1,10 +1,15 @@
 import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'relative',
+  },
+  container: {
+    paddingVertical: '15%',
+    flex: 1,
+    // justifyContent: 'center',
+    // alignItems: 'center',
   },
   floatBtn: {
     flexDirection: 'row',
@@ -22,17 +27,22 @@ const styles = StyleSheet.create({
     padding: 5,
     marginRight: 8,
   },
-  imageContainer: {
+  carVarietyContainer: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-evenly',
   },
-  imageWrapper: {
+  carContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
+    // alignItems: 'center',
     padding: 12,
   },
+  // imageWrapper: {},
   image: {
     width: '100%',
+    height: 80,
     resizeMode: 'contain',
   },
 });

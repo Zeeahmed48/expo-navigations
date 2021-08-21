@@ -26,8 +26,10 @@ const Routes = () => {
 
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       const token = await AsyncStorage.getItem('loginToken');
-      if (token !== null) {
+      if (token) {
+        setIsLoading(false);
         setSignedIn(true);
         const facebookProfileData = await loginUsingToken(token);
         ///// DO SOMETHING WITH FACEBOOK PROFILE DATA /////
@@ -49,9 +51,9 @@ const Routes = () => {
       }}
     >
       {!signedIn ? (
-        <Stack.Screen name='authstack'>
+        <Stack.Screen name='Login'>
           {(props) => (
-            <AuthStack
+            <Login
               setSignedIn={setSignedIn}
               isLoading={isLoading}
               setIsLoading={setIsLoading}
@@ -96,29 +98,6 @@ const DrawerNavigator = ({ setSignedIn, user }) => {
         component={TripStack}
       />
     </Drawer.Navigator>
-  );
-};
-
-const AuthStack = (props) => {
-  const { setSignedIn, isLoading, setIsLoading } = props;
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-      {...props}
-    >
-      <Stack.Screen name='Login'>
-        {(props) => (
-          <Login
-            setSignedIn={setSignedIn}
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-            {...props}
-          />
-        )}
-      </Stack.Screen>
-    </Stack.Navigator>
   );
 };
 

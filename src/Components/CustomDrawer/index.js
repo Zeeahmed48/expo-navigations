@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DrawerContent = (props) => {
   const { setSignedIn, user } = props;
+  const { name, picture } = user;
 
   const logOut = async () => {
     try {
@@ -28,11 +29,11 @@ const DrawerContent = (props) => {
           <View style={styles.userInfo}>
             <Avatar.Image
               source={{
-                uri: user?.picture,
+                uri: picture ? picture : null,
               }}
               size={50}
             />
-            <Title style={styles.title}>{user?.name}</Title>
+            <Title style={styles.title}>{name}</Title>
           </View>
           <Drawer.Section style={styles.drawerSection}>
             <DrawerItem

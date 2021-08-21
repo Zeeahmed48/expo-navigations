@@ -16,9 +16,8 @@ const Home = ({ navigation }) => {
   });
   const [isPickUpSelected, setIsPickUpSelected] = useState(false);
 
-  const pickUpSelected = (callBack) => {
+  const pickUpSelected = () => {
     setIsPickUpSelected(true);
-    callBack();
   };
 
   const cancelPickUp = () => {
@@ -28,8 +27,8 @@ const Home = ({ navigation }) => {
   };
 
   const confirmPickUp = () => {
-    // setIsPickUpSelected(false);
-    // navigation.navigate('dropoff', { pickUp: region });
+    setIsPickUpSelected(false);
+    navigation.navigate('dropoff', { pickUp: region });
   };
 
   useEffect(() => {
