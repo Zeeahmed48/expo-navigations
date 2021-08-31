@@ -245,6 +245,10 @@ const MapStyle = [
 ];
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   map: {
     flex: 1,
     width: Dimensions.get('window').width,

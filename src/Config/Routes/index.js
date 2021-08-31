@@ -1,48 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Facebook from 'expo-facebook';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
-import { loginUsingToken } from '../Firebase';
-//Screens
+import { loginUsingToken, signInWithFacebook, db, auth } from '../Firebase';
+import 'react-native-get-random-values';
+// Navigations
+import DrawerNavigator from './DrawerNavigator';
 import Login from '../../Views/Auth/Login';
-import Home from '../../Views/Home';
-import Trips from '../../Views/Trips';
-import TripDetails from '../../Views/TripDetails';
-import DropOff from '../../Views/DropOff';
-import SelectCar from '../../Views/SelectCar';
-import CustomDrawer from '../../Components/CustomDrawer';
-
-const Drawer = createDrawerNavigator();
-const Stack = createStackNavigator();
 
 const Routes = () => {
+  const Stack = createStackNavigator();
   const [isLoading, setIsLoading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [user, setUser] = useState({
-    name: '',
-    picture: '',
-  });
+  const [user, setUser] = useState();
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      const token = await AsyncStorage.getItem('loginToken');
-      if (token) {
-        setIsLoading(false);
-        setSignedIn(true);
-        const facebookProfileData = await loginUsingToken(token);
-        ///// DO SOMETHING WITH FACEBOOK PROFILE DATA /////
-        const { name, picture } =
-          facebookProfileData?.additionalUserInfo?.profile;
-        setUser({
-          ...user,
-          name,
-          picture: picture?.data?.url,
-        });
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        // console.log('user persitance ===>', user);
       }
-    })();
+    });
   }, []);
+
+  // useEffect(() => {
+  //   (async () => {
+  //     const auth = await AsyncStorage.getItem('auth');
+  //     const authObj = JSON.parse(auth);
+  //     if (authObj) {
+  //       const { token, userId } = authObj;
+  //       await loginUsingToken(token);
+  //       const userData = await db.collection('users').doc(userId).get();
+  //       console.log('firebase user from useEffect db ===>', userData.data());
+  //       setUser(userData.data());
+  //       setIsLoading(false);
+  //       setSignedIn(true);
+  //     }
+  //   })();
+  // }, []);
+
+  const loginWithFacebook = async (loginRole) => {
+    try {
+      setIsLoading(true);
+      const { type, token, userId } = await signInWithFacebook();
+      switch (type) {
+        case 'success': {
+          ///// SAVING USER ROLE AND TOKEN /////
+          const authJson = JSON.stringify({ token, userId });
+          await AsyncStorage.setItem('auth', authJson);
+          const facebookProfileData = await loginUsingToken(token);
+          ///// DO SOMETHING WITH FACEBOOK PROFILE DATA /////
+          const { id, name, email, picture } =
+            facebookProfileData?.additionalUserInfo?.profile;
+          const profilePicture = picture?.data?.url;
+          if (loginRole === 'user') {
+            await addUser(id, {
+              role: loginRole,
+              id,
+              name,
+              email,
+              profilePicture,
+            });
+            const userData = await db.collection('users').doc(userId).get();
+            setUser(userData.data());
+          } else if (loginRole === 'driver') {
+            await addDrvier(id, {
+              role: loginRole,
+              id,
+              name,
+              email,
+              profilePicture,
+              request: null,
+            });
+            const userData = await db.collection('drivers').doc(userId).get();
+            setUser(userData.data());
+          }
+          setIsLoading(false);
+          setSignedIn(true);
+        }
+      }
+    } catch ({ message }) {
+      alert(`Facebook Login Error: ${message}`);
+      setIsLoading(false);
+    }
+  };
+
+  const addUser = (userId, userData) => {
+    return db.collection('users').doc(userId).set(userData);
+  };
+
+  const addDrvier = (userId, userData) => {
+    return db.collection('drivers').doc(userId).set(userData);
+  };
 
   return (
     <Stack.Navigator
@@ -54,9 +101,8 @@ const Routes = () => {
         <Stack.Screen name='Login'>
           {(props) => (
             <Login
-              setSignedIn={setSignedIn}
+              loginWithFacebook={loginWithFacebook}
               isLoading={isLoading}
-              setIsLoading={setIsLoading}
               {...props}
             />
           )}
@@ -64,58 +110,14 @@ const Routes = () => {
       ) : (
         <Stack.Screen name='drawernavigator'>
           {(props) => (
-            <DrawerNavigator setSignedIn={setSignedIn} user={user} {...props} />
+            <DrawerNavigator
+              setSignedIn={setSignedIn}
+              {...props}
+              user={user && user}
+            />
           )}
         </Stack.Screen>
       )}
-    </Stack.Navigator>
-  );
-};
-
-const DrawerNavigator = ({ setSignedIn, user }) => {
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: '#e2b052' },
-        headerTintColor: '#383838',
-      }}
-      drawerContent={(props) => (
-        <CustomDrawer {...props} setSignedIn={setSignedIn} user={user} />
-      )}
-    >
-      <Drawer.Screen
-        options={{
-          title: 'Dashboard',
-        }}
-        name='DashboardStack'
-        component={DashboardStack}
-      />
-      <Drawer.Screen
-        options={{
-          title: 'Trips',
-        }}
-        name='TripStack'
-        component={TripStack}
-      />
-    </Drawer.Navigator>
-  );
-};
-
-const DashboardStack = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name='dashboard' component={Home} />
-      <Stack.Screen name='dropoff' component={DropOff} />
-      <Stack.Screen name='selectcars' component={SelectCar} />
-    </Stack.Navigator>
-  );
-};
-
-const TripStack = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name='Trips' component={Trips} />
-      <Stack.Screen name='TripDetails' component={TripDetails} />
     </Stack.Navigator>
   );
 };

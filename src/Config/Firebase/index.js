@@ -17,13 +17,28 @@ if (firebase.apps.length === 0) {
 }
 
 const db = firebase.firestore();
+const auth = firebase.auth();
 const appId = '328746008952558';
 
-const storeLocation = (userId = 'pJ2iwW1zaaUXD9YcPqLJ', location) => {
+const storeUserLocation = (userId, location) => {
   return db
-    .collection('customer')
+    .collection('users')
     .doc(userId)
     .update({ ...location });
+};
+
+const storeDriverLocation = (driverId, location) => {
+  return db
+    .collection('drivers')
+    .doc(driverId)
+    .update({ ...location });
+};
+
+const requestSingleDriver = (driverId, request) => {
+  return db
+    .collection('drivers')
+    .doc(driverId)
+    .update({ ...request });
 };
 
 const signInWithFacebook = async () => {
@@ -31,7 +46,9 @@ const signInWithFacebook = async () => {
   Facebook.initializeAsync({
     appId,
   });
-  return Facebook.logInWithReadPermissionsAsync({ permissions });
+  return Facebook.logInWithReadPermissionsAsync({
+    permissions,
+  });
 };
 
 const loginUsingToken = async (token) => {
@@ -47,4 +64,13 @@ const signOut = async () => {
   return Facebook.logOutAsync();
 };
 
-export { db, storeLocation, signInWithFacebook, loginUsingToken, signOut };
+export {
+  db,
+  auth,
+  storeUserLocation,
+  storeDriverLocation,
+  requestSingleDriver,
+  signInWithFacebook,
+  loginUsingToken,
+  signOut,
+};

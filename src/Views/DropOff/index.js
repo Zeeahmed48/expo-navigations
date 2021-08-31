@@ -25,7 +25,10 @@ const DropOff = ({ route, navigation }) => {
   const confirmDropOff = () => {
     setIsDropOffSelected(false);
     const totalDistance = calculateDistance();
-    navigation.navigate('selectcars', { distance: totalDistance });
+    navigation.navigate('selectcars', {
+      distance: totalDistance,
+      location: { pickUp, region },
+    });
   };
 
   const calculateDistance = () => {

@@ -9,12 +9,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DrawerContent = (props) => {
   const { setSignedIn, user } = props;
-  const { name, picture } = user;
+  const { name, profilePicture, role } = user && user;
 
   const logOut = async () => {
     try {
       await signOut();
-      await AsyncStorage.removeItem('loginToken');
+      await AsyncStorage.removeItem('auth');
       console.log('signOut successfully');
       setSignedIn(false);
     } catch ({ message }) {
@@ -29,31 +29,48 @@ const DrawerContent = (props) => {
           <View style={styles.userInfo}>
             <Avatar.Image
               source={{
-                uri: picture ? picture : null,
+                uri: profilePicture ? profilePicture : null,
               }}
               size={50}
             />
-            <Title style={styles.title}>{name}</Title>
+            <Title style={styles.title}>{name && name}</Title>
           </View>
           <Drawer.Section style={styles.drawerSection}>
-            <DrawerItem
-              inactiveTintColor='#e2b052'
-              icon={() => (
-                <Icon name='view-dashboard' size={28} color='#e2b052' />
-              )}
-              label='Home'
-              onPress={() => {
-                props.navigation.navigate('DashboardStack');
-              }}
-            />
-            <DrawerItem
-              inactiveTintColor='#e2b052'
-              icon={() => <FontAwesome name='user' size={28} color='#e2b052' />}
-              label='Trips'
-              onPress={() => {
-                props.navigation.navigate('TripStack');
-              }}
-            />
+            {role === 'driver' ? (
+              <DrawerItem
+                inactiveTintColor='#e2b052'
+                icon={() => (
+                  <Icon name='view-dashboard' size={28} color='#e2b052' />
+                )}
+                label='Dashboard'
+                onPress={() => {
+                  props.navigation.navigate('DashboardStack');
+                }}
+              />
+            ) : (
+              <>
+                <DrawerItem
+                  inactiveTintColor='#e2b052'
+                  icon={() => (
+                    <Icon name='view-dashboard' size={28} color='#e2b052' />
+                  )}
+                  label='Dashboard'
+                  onPress={() => {
+                    props.navigation.navigate('DashboardStack');
+                  }}
+                />
+                <DrawerItem
+                  inactiveTintColor='#e2b052'
+                  icon={() => (
+                    <FontAwesome name='user' size={28} color='#e2b052' />
+                  )}
+                  label='Trips'
+                  onPress={() => {
+                    props.navigation.navigate('TripStack');
+                  }}
+                />
+              </>
+            )}
           </Drawer.Section>
         </View>
       </DrawerContentScrollView>

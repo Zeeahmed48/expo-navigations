@@ -1,5 +1,4 @@
 import React from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -7,48 +6,30 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { signInWithFacebook } from '../../../Config/Firebase';
 
-const Login = ({ setSignedIn, isLoading, setIsLoading, navigation }) => {
-  const loginWithFacebook = async (loginType) => {
-    try {
-      setIsLoading(true);
-      const { type, token } = await signInWithFacebook();
-      switch (type) {
-        case 'success': {
-          setSignedIn(true);
-          ///// SAVING TOKEN /////
-          await AsyncStorage.setItem('loginToken', token);
-        }
-        case 'cancel': {
-          setIsLoading(false);
-          setSignedIn(false);
-        }
-      }
-    } catch ({ message }) {
-      alert(`Facebook Login Error: ${message}`);
-      setIsLoading(false);
-    }
-  };
-
+const Login = ({ isLoading, loginWithFacebook }) => {
   return (
     <View style={styles.container}>
       {isLoading ? (
         <ActivityIndicator size='large' color='#e2b052' />
       ) : (
         <View>
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => loginWithFacebook('user')}
-          >
-            <Text style={styles.btnText}>Log in as user</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => loginWithFacebook('driver')}
-          >
-            <Text style={styles.btnText}>Log in as driver</Text>
-          </TouchableOpacity>
+          <View style={{ margin: 8 }}>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => loginWithFacebook('user')}
+            >
+              <Text style={styles.btnText}>Log in as user</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ margin: 8 }}>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => loginWithFacebook('driver')}
+            >
+              <Text style={styles.btnText}>Log in as driver</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -62,14 +43,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btn: {
-    justifyContent: 'center',
     backgroundColor: '#e2b052',
     paddingVertical: 10,
     paddingHorizontal: 15,
+    margin: 5,
+    borderRadius: 8,
+    // justifyContent: 'center',
   },
   btnText: {
     color: '#fff',
+    fontSize: 18,
   },
+  startBtn: {},
+  startBtnText: {},
 });
 
 export default Login;

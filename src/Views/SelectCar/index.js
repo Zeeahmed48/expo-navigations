@@ -7,15 +7,30 @@ import {
   View,
   Modal,
 } from 'react-native';
-import styles from './styles';
 import CarMini from '../../../assets/images/car_mini.png';
 import CarGo from '../../../assets/images/car_go.png';
 import carBusiness from '../../../assets/images/car_business.png';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {
+  geohashForLocation,
+  geohashQueryBounds,
+  distanceBetween,
+} from 'geofire-common';
+import {
+  db,
+  requestSingleDriver,
+  storeUserLocation,
+} from '../../Config/Firebase';
+import styles from './styles';
 
-const SelectCar = ({ route, navigation }) => {
-  const { distance } = route.params;
+const SelectCar = ({ route, navigation, user }) => {
+  const { distance, location } = route.params;
+  const { id } = user;
+  const { pickUp, region } = location;
   const [modalVisible, setModalVisible] = useState(false);
+  const [drivers, setDrivers] = useState(null);
+  const [text, setText] = useState('');
+  const [driverResponseText, setDriverResponseText] = useState('');
   const cars = [
     {
       carImage: CarMini,
@@ -34,48 +49,164 @@ const SelectCar = ({ route, navigation }) => {
     },
   ];
 
+  const findDriver = async () => {
+    const { latitude, longitude } = pickUp;
+    const lat = pickUp.latitude;
+    const lng = pickUp.longitude;
+    const hash = geohashForLocation([lat, lng]);
+    const storeData = {
+      geohash: hash,
+      lat,
+      lng,
+    };
+    await storeUserLocation(id, storeData);
+    setModalVisible(true);
+    const center = [latitude, longitude];
+    const radiusInM = 15 * 1000;
+    const bounds = geohashQueryBounds(center, radiusInM);
+    const promises = [];
+    for (const b of bounds) {
+      const q = db
+        .collection('drivers')
+        .orderBy('geohash')
+        .startAt(b[0])
+        .endAt(b[1]);
+      promises.push(q.get());
+    }
+    // Collecting all the query results together into a single list
+    Promise.all(promises)
+      .then((snapshots) => {
+        const matchingDocs = [];
+        for (const snap of snapshots) {
+          for (const doc of snap.docs) {
+            const lat = doc.get('lat');
+            const lng = doc.get('lng');
+            // We have to filter out a few false positives due to GeoHash
+            // accuracy, but most will match
+            const distanceInKm = distanceBetween([lat, lng], center);
+            const distanceInM = distanceInKm * 1000;
+            if (distanceInM <= radiusInM) {
+              matchingDocs.push(doc?.data());
+            }
+          }
+        }
+        return matchingDocs;
+      })
+      .then((matchingDocs) => {
+        ///// DO SOMETHING WITH MATCHING DOCS /////
+        sendRequest(matchingDocs, 0);
+      });
+  };
+
+  const sendRequest = async (matchingDocs, currentDriver) => {
+    let currentDriverIndex = currentDriver;
+    if (currentDriver >= matchingDocs.length) {
+      setText('Sorry! No More Drivers left');
+      return;
+    }
+    console.log(currentDriver, matchingDocs.length);
+    setDrivers(matchingDocs);
+    const id = matchingDocs[currentDriver]?.id;
+    await requestSingleDriver(id, { request: 'pending' });
+    db.collection('drivers')
+      .doc(id)
+      .onSnapshot((doc) => {
+        const driverResponse = doc?.data()?.request;
+        const driverName = doc?.data()?.name;
+        if (driverResponse === 'rejected') {
+          currentDriverIndex += 1;
+          setDriverResponseText('rejected');
+          setText('Driver rejected! Sending request to another driver');
+          sendRequest(matchingDocs, currentDriverIndex);
+        } else if (driverResponse === 'accepted') {
+          setText(`${driverName} Accepted Ride!`);
+          setDriverResponseText('accepted');
+          startTrip(matchingDocs, currentDriver);
+        }
+      });
+  };
+
+  const startTrip = (driversArray, currentDriver) => {
+    const driverId = driversArray[currentDriver]?.id;
+    db.collection('drivers')
+      .doc(driverId)
+      .update({ request: 'started', customer: id });
+    db.collection('drivers')
+      .doc(driverId)
+      .onSnapshot((doc) => {
+        const driverResponse = doc?.data()?.request;
+        if (driverResponse === 'started') {
+          navigation.navigate('tripStarted', { driverId, id, dropOff: region });
+        }
+      });
+  };
+
   return (
     <View style={styles.root}>
-      <View style={styles.floatBtn}>
-        <TouchableOpacity
-          style={styles.backIcon}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name='arrow-back' color='#e2b052' size={28} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.container}>
-        <View>
-          <Text style={{ textAlign: 'center' }}>
-            Select car to start your trip: {`${distance} km`}
-          </Text>
-        </View>
-        <View style={styles.carVarietyContainer}>
-          {cars.map(({ carImage, carName, carPrice }, index) => (
+      {!modalVisible ? (
+        <>
+          <View style={styles.floatBtn}>
             <TouchableOpacity
-              style={styles.carContainer}
-              key={index}
-              onPress={() => setModalVisible(true)}
+              style={styles.backIcon}
+              onPress={() => navigation.goBack()}
             >
-              <View style={styles.imageWrapper}>
-                <Image source={carImage} style={styles.image} />
-              </View>
-              <Text>{carName}</Text>
-              <Text>{`${distance} km : ${Math.round(
-                distance * carPrice
-              )} rs`}</Text>
+              <Icon name='arrow-back' color='#e2b052' size={28} />
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      <View
-      // style={{ position: 'absolute', top: 0, left: 0 }}
-      >
+          </View>
+          <View style={styles.container}>
+            <View>
+              <Text style={{ textAlign: 'center' }}>
+                Select car to start your trip: {`${distance} km`}
+              </Text>
+            </View>
+            <View style={styles.carVarietyContainer}>
+              {cars.map(({ carImage, carName, carPrice }, index) => (
+                <TouchableOpacity
+                  style={styles.carContainer}
+                  key={index}
+                  onPress={findDriver}
+                >
+                  <View style={styles.imageWrapper}>
+                    <Image source={carImage} style={styles.image} />
+                  </View>
+                  <Text style={styles.textCenter}>{carName}</Text>
+                  <Text
+                    style={styles.textCenter}
+                  >{`${distance} km : ${Math.round(
+                    distance * carPrice
+                  )} rs`}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </>
+      ) : (
         <Modal animationType='slide' transparent={true} visible={modalVisible}>
-          <ActivityIndicator size='large' color='#e2b052' />
-          <Text>Finding Driver</Text>
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              {drivers ? (
+                <>
+                  {/* <ActivityIndicator size='large' color='#e2b052' /> */}
+                  <Text style={styles.reqMessage}>
+                    {driverResponseText === 'accepted'
+                      ? text
+                      : driverResponseText === 'rejected'
+                      ? text
+                      : `${drivers?.length} Driver Found`}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator size='large' color='#e2b052' />
+                  <View style={styles.modalText}>
+                    <Text style={styles.textCenter}>Finding Driver</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
         </Modal>
-      </View>
+      )}
     </View>
   );
 };
