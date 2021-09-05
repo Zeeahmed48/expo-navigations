@@ -29,6 +29,7 @@ const SelectCar = ({ route, navigation, user }) => {
   const { pickUp, region } = location;
   const [modalVisible, setModalVisible] = useState(false);
   const [drivers, setDrivers] = useState(null);
+  const [noDriver, setNoDriver] = useState(false);
   const [text, setText] = useState('');
   const [driverResponseText, setDriverResponseText] = useState('');
   const cars = [
@@ -49,7 +50,7 @@ const SelectCar = ({ route, navigation, user }) => {
     },
   ];
 
-  const findDriver = async () => {
+  const findDriver = async (carPrice) => {
     const { latitude, longitude } = pickUp;
     const lat = pickUp.latitude;
     const lng = pickUp.longitude;
@@ -94,17 +95,17 @@ const SelectCar = ({ route, navigation, user }) => {
       })
       .then((matchingDocs) => {
         ///// DO SOMETHING WITH MATCHING DOCS /////
-        sendRequest(matchingDocs, 0);
+        sendRequest(matchingDocs, 0, carPrice);
       });
   };
 
-  const sendRequest = async (matchingDocs, currentDriver) => {
+  const sendRequest = async (matchingDocs, currentDriver, carPrice) => {
     let currentDriverIndex = currentDriver;
     if (currentDriver >= matchingDocs.length) {
       setText('Sorry! No More Drivers left');
+      setNoDriver(true);
       return;
     }
-    console.log(currentDriver, matchingDocs.length);
     setDrivers(matchingDocs);
     const id = matchingDocs[currentDriver]?.id;
     await requestSingleDriver(id, { request: 'pending' });
@@ -121,16 +122,18 @@ const SelectCar = ({ route, navigation, user }) => {
         } else if (driverResponse === 'accepted') {
           setText(`${driverName} Accepted Ride!`);
           setDriverResponseText('accepted');
-          startTrip(matchingDocs, currentDriver);
+          let price = Math.round((carPrice * distance) / 100);
+          console.log('price ==>', price);
+          startTrip(matchingDocs, currentDriver, { price, distance });
         }
       });
   };
 
-  const startTrip = (driversArray, currentDriver) => {
+  const startTrip = (driversArray, currentDriver, pay) => {
     const driverId = driversArray[currentDriver]?.id;
     db.collection('drivers')
       .doc(driverId)
-      .update({ request: 'started', customer: id });
+      .update({ request: 'started', customer: id, pay });
     db.collection('drivers')
       .doc(driverId)
       .onSnapshot((doc) => {
@@ -156,7 +159,7 @@ const SelectCar = ({ route, navigation, user }) => {
           <View style={styles.container}>
             <View>
               <Text style={{ textAlign: 'center' }}>
-                Select car to start your trip: {`${distance} km`}
+                Select car to start your trip: {`${distance} m`}
               </Text>
             </View>
             <View style={styles.carVarietyContainer}>
@@ -164,7 +167,7 @@ const SelectCar = ({ route, navigation, user }) => {
                 <TouchableOpacity
                   style={styles.carContainer}
                   key={index}
-                  onPress={findDriver}
+                  onPress={() => findDriver(carPrice)}
                 >
                   <View style={styles.imageWrapper}>
                     <Image source={carImage} style={styles.image} />
@@ -172,8 +175,8 @@ const SelectCar = ({ route, navigation, user }) => {
                   <Text style={styles.textCenter}>{carName}</Text>
                   <Text
                     style={styles.textCenter}
-                  >{`${distance} km : ${Math.round(
-                    distance * carPrice
+                  >{`${distance} m : ${Math.round(
+                    (distance * carPrice) / 100
                   )} rs`}</Text>
                 </TouchableOpacity>
               ))}
@@ -186,7 +189,6 @@ const SelectCar = ({ route, navigation, user }) => {
             <View style={styles.modalView}>
               {drivers ? (
                 <>
-                  {/* <ActivityIndicator size='large' color='#e2b052' /> */}
                   <Text style={styles.reqMessage}>
                     {driverResponseText === 'accepted'
                       ? text
@@ -194,6 +196,14 @@ const SelectCar = ({ route, navigation, user }) => {
                       ? text
                       : `${drivers?.length} Driver Found`}
                   </Text>
+                  {noDriver && (
+                    <TouchableOpacity
+                      style={styles.startBtn}
+                      onPress={() => navigation.navigate('dashboard')}
+                    >
+                      <Text style={styles.startBtnText}>Go Back</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               ) : (
                 <>

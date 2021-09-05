@@ -13,6 +13,7 @@ import MapViewDirections from 'react-native-maps-directions';
 const DriverDashboard = ({ driver }) => {
   const { id } = driver;
   const [isTripStarted, setIsTripStarted] = useState(false);
+  const [isTripEnded, setIsTripEnded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [region, setRegion] = useState({
     latitude: 24.9286909,
@@ -55,36 +56,44 @@ const DriverDashboard = ({ driver }) => {
   }, []);
 
   useEffect(() => {
-    (() => {
-      db.collection('drivers')
-        .doc(id)
-        .onSnapshot(async (doc) => {
-          const obj = doc.data();
-          if (obj?.request === 'pending') {
-            setModalVisible(true);
-          } else if (obj?.request === 'started') {
-            const userId = obj?.customer;
-            const userLocation = await db.collection('users').doc(userId).get();
-            const { lat, lng } = userLocation?.data();
-            setUserMarker({ ...userMarker, latitude: lat, longitude: lng });
-          } else if (obj?.request === 'customerAccepted') {
-            db.collection('users')
-              .doc(userId)
-              .onSnapshot((doc) => {
-                const obj = doc.data();
-                let dropOffPoint = obj?.dropOffPoint;
-                if (dropOffPoint) {
-                  setIsTripStarted(true);
-                  setDropOffPoint(dropOffPoint);
-                }
-              });
-          } else if (obj?.request === 'ended') {
-            setIsTripStarted(false);
-            setUserMarker({ ...userMarker, latitude: null, longitude: null });
-          }
-        });
-    })();
+    startListenToRequest();
   }, []);
+
+  let requestListener;
+
+  const startListenToRequest = () => {
+    requestListener = db
+      .collection('drivers')
+      .doc(id)
+      .onSnapshot(async (doc) => {
+        const obj = doc.data();
+        if (obj?.request === 'pending') {
+          setModalVisible(true);
+        } else if (obj?.request === 'started') {
+          const userId = obj?.customer;
+          const userLocation = await db.collection('users').doc(userId).get();
+          const { lat, lng } = userLocation?.data();
+          setUserMarker({ ...userMarker, latitude: lat, longitude: lng });
+        } else if (obj?.request === 'customerAccepted') {
+          const dropOffLocation = obj?.dropOff;
+          if (dropOffLocation) {
+            setDropOffPoint(dropOffLocation);
+            setIsTripStarted(true);
+          }
+        } else if (obj?.request === 'ended') {
+          setIsTripStarted(false);
+          setIsTripEnded(true);
+          setModalVisible(true);
+          setUserMarker({ ...userMarker, latitude: null, longitude: null });
+          stopListenToRequest();
+        }
+      });
+  };
+
+  const stopListenToRequest = () => {
+    requestListener();
+    console.log('response listening stopped');
+  };
 
   useEffect(() => {
     (async () => {
@@ -136,15 +145,34 @@ const DriverDashboard = ({ driver }) => {
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
                 <View style={styles.modalTextWrapper}>
-                  <Text>Customer Found!</Text>
+                  <Text>
+                    {isTripEnded ? 'Detination Reached!' : 'Customer Found!'}
+                  </Text>
                 </View>
                 <View style={styles.btnContainer}>
-                  <TouchableOpacity style={styles.modalBtn} onPress={acceptReq}>
-                    <Text style={styles.modalBtnText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.modalBtn} onPress={rejectReq}>
-                    <Text style={styles.modalBtnText}>Reject</Text>
-                  </TouchableOpacity>
+                  {isTripEnded ? (
+                    <TouchableOpacity
+                      style={styles.modalBtn}
+                      onPress={() => setModalVisible(false)}
+                    >
+                      <Text style={styles.modalBtnText}>Close</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={styles.modalBtn}
+                        onPress={acceptReq}
+                      >
+                        <Text style={styles.modalBtnText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.modalBtn}
+                        onPress={rejectReq}
+                      >
+                        <Text style={styles.modalBtnText}>Reject</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               </View>
             </View>

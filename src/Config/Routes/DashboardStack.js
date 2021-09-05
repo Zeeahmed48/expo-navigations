@@ -9,8 +9,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 const DashboardStack = ({ user }) => {
   const Stack = createStackNavigator();
 
-  console.log('Role based screens***', user?.role);
-
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {user?.role === 'driver' ? (

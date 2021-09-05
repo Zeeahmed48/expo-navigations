@@ -14,12 +14,12 @@ import { db } from '../../Config/Firebase';
 import CarMarker from '../../../assets/images/car_mini.png';
 import MapPin from '../../../assets/images/map_pin.png';
 
-const TripStarted = ({ route }) => {
+const TripStarted = ({ navigation, route }) => {
   const { driverId, id, dropOff } = route.params;
-  const [dInM, setDInM] = useState('');
   const [driverName, setDriverName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [isTripStarted, setIsTripStarted] = useState(false);
+  const [pay, setPay] = useState({});
   const [isTripEnded, setIsTripEnded] = useState(false);
   const [userMarker, setUserMarker] = useState({
     latitude: null,
@@ -45,98 +45,118 @@ const TripStarted = ({ route }) => {
       const userLocation = await db.collection('users').doc(id).get();
       const { lat, lng } = userLocation.data();
       setUserMarker({ ...userMarker, latitude: lat, longitude: lng });
+      startListenToDriver({ lat, lng });
     })();
-    db.collection('drivers')
+  }, []);
+
+  let driverListener;
+
+  const startListenToDriver = (userLocation) => {
+    driverListener = db
+      .collection('drivers')
       .doc(driverId)
       .onSnapshot((doc) => {
         const { name, lat, lng } = doc?.data();
         setDriverMarker({ ...driverMarker, latitude: lat, longitude: lng });
         setDriverName(name);
+        console.log('driver listening started');
+        calculateDriverDistance(userLocation, { lat, lng });
       });
-  }, []);
+  };
 
-  useEffect(() => {
-    if (
-      driverMarker?.latitude &&
-      driverMarker.longitude &&
-      userMarker?.longitude &&
-      userMarker?.longitude
-    ) {
-      // if (dInM <= 100) {
-      //   return;
-      // }
-      calculateDistance();
-    }
-  }, [driverMarker?.latitude, driverMarker.longitude]);
+  const stopListenToDriver = () => {
+    driverListener();
+    console.log('driver listening stopped');
+  };
 
-  const calculateDistance = () => {
+  const calculateDriverDistance = (userLocation, driverLocation) => {
     const allCoords = {
-      lat1: userMarker?.latitude,
-      lon1: userMarker?.longitude,
-      lat2: driverMarker?.latitude,
-      lon2: driverMarker?.longitude,
+      lat1: userLocation?.lat,
+      lon1: userLocation?.lng,
+      lat2: driverLocation?.lat,
+      lon2: driverLocation?.lng,
     };
-    const { lat1, lat2, lon1, lon2 } = allCoords;
-    var R = 6371; // Radius of the earth in km
-    var dLat = deg2rad(lat2 - lat1); // deg2rad below
-    var dLon = deg2rad(lon2 - lon1);
-    var a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) *
-        Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    var d = R * c; // Distance in km
-    const distanceInMeter = d * 1000;
-    console.log('distanceInMeter ===>', distanceInMeter);
-    if (distanceInMeter <= 100) {
-      setModalVisible(true);
-      return;
-      // setDInM(distanceInMeter);
+    const { lat1, lon1, lat2, lon2 } = allCoords;
+    if (lat1 && lon1 && lat2 && lon2) {
+      var R = 6371; // Radius of the earth in km
+      var dLat = deg2rad(lat2 - lat1); // deg2rad below
+      var dLon = deg2rad(lon2 - lon1);
+      var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) *
+          Math.cos(deg2rad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      var d = R * c; // Distance in km
+      const distanceInMeter = d * 1000;
+      if (distanceInMeter <= 100) {
+        setModalVisible(true);
+        stopListenToDriver();
+      }
     }
   };
 
   const startTrip = () => {
+    console.log('started');
+    startListenToTrip();
     const { latitude, longitude } = dropOff;
     setDropOffPoint({ ...dropOffPoint, latitude, longitude });
     setModalVisible(false);
     setIsTripStarted(true);
-    db.collection('users').doc(id).update({ dropOffPoint });
-    db.collection('drivers')
-      .doc(driverId)
-      .update({ request: 'customerAccepted' });
-    db.collection('drivers')
+    db.collection('drivers').doc(driverId).update({
+      request: 'customerAccepted',
+      dropOff,
+    });
+  };
+
+  let tripListener;
+
+  const startListenToTrip = () => {
+    tripListener = db
+      .collection('drivers')
       .doc(driverId)
       .onSnapshot((doc) => {
-        const { lat, lng } = doc?.data();
+        const { lat, lng, pay } = doc?.data();
+        setPay(pay);
         setDriverMarker({ ...driverMarker, latitude: lat, longitude: lng });
-        const allCoords = {
-          lat1: dropOffPoint?.latitude,
-          lon1: dropOffPoint?.longitude,
-          lat2: driverMarker?.latitude,
-          lon2: driverMarker?.longitude,
-        };
-        const { lat1, lat2, lon1, lon2 } = allCoords;
-        var R = 6371; // Radius of the earth in km
-        var dLat = deg2rad(lat2 - lat1); // deg2rad below
-        var dLon = deg2rad(lon2 - lon1);
-        var a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(deg2rad(lat1)) *
-            Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        var d = R * c; // Distance in km
-        const distanceInMeter = d * 1000;
-        if (distanceInMeter <= 100) {
-          setIsTripEnded(true);
-          setModalVisible(true);
-          return;
-        }
+        console.log('trip listening started');
+        calculateTripDistance();
       });
+  };
+
+  const stopListenToTrip = () => {
+    tripListener();
+    console.log('trip listening stopped');
+  };
+
+  const calculateTripDistance = () => {
+    const allCoords = {
+      lat1: dropOff?.latitude,
+      lon1: dropOff?.longitude,
+      lat2: driverMarker?.latitude,
+      lon2: driverMarker?.longitude,
+    };
+    const { lat1, lat2, lon1, lon2 } = allCoords;
+    if (lat1 && lon1 && lat2 && lon2) {
+      var R = 6371; // Radius of the earth in km
+      var dLat = deg2rad(lat2 - lat1); // deg2rad below
+      var dLon = deg2rad(lon2 - lon1);
+      var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) *
+          Math.cos(deg2rad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      var d = R * c; // Distance in km
+      const distanceInMeter = d * 1000;
+      if (distanceInMeter <= 100) {
+        setIsTripEnded(true);
+        setModalVisible(true);
+        stopListenToTrip();
+      }
+    }
   };
 
   const deg2rad = (deg) => {
@@ -144,14 +164,18 @@ const TripStarted = ({ route }) => {
   };
 
   const endTrip = () => {
+    setModalVisible(false);
     db.collection('drivers').doc(driverId).update({ request: 'ended' });
+    navigation.navigate('dashboard');
   };
 
   return (
     <>
       {!modalVisible ? (
-        userMarker.latitude &&
-        userMarker.longitude && (
+        userMarker?.latitude &&
+        userMarker?.longitude &&
+        driverMarker?.latitude &&
+        driverMarker?.longitude && (
           <MapView
             region={driverMarker}
             provider={PROVIDER_GOOGLE}
@@ -190,14 +214,25 @@ const TripStarted = ({ route }) => {
                     ? 'Destination Reached!'
                     : `${driverName} Has Arrived!`}
                 </Text>
-                <TouchableOpacity
-                  style={styles.startBtn}
-                  onPress={isTripEnded ? endTrip : startTrip}
-                >
-                  <Text style={styles.startBtnText}>
-                    {isTripEnded ? 'End Trip' : 'Start Trip'}
-                  </Text>
-                </TouchableOpacity>
+                {isTripEnded && (
+                  <>
+                    <Text style={styles.arriveMsg}>
+                      {`Distance: ${pay.distance} m`}
+                    </Text>
+                    <Text
+                      style={styles.arriveMsg}
+                    >{`pay: ${pay.price} rs`}</Text>
+                  </>
+                )}
+                {isTripEnded ? (
+                  <TouchableOpacity style={styles.startBtn} onPress={endTrip}>
+                    <Text style={styles.startBtnText}>End Trip</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.startBtn} onPress={startTrip}>
+                    <Text style={styles.startBtnText}>Start Trip</Text>
+                  </TouchableOpacity>
+                )}
               </>
             </View>
           </View>

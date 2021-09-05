@@ -51,8 +51,8 @@ const DropOff = ({ route, navigation }) => {
 
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     var d = R * c; // Distance in km
-    const distanceInKm = d.toFixed(1);
-    return distanceInKm;
+    const distanceInMeter = Math.floor(d * 1000);
+    return distanceInMeter;
   };
 
   const deg2rad = (deg) => {
