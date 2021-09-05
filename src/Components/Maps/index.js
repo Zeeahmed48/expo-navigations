@@ -6,8 +6,8 @@ import MapPin from '../../../assets/images/map_pin.png';
 import { MapStyle, styles } from './styles';
 
 const Map = ({ region, setRegion, selected, status }) => {
-  const clientId = 'VJIEZGBRDDZHMTMGJTHZYWL3L2URSSXNJV0VFNU0I2V1FFNA';
-  const clientSecret = 'FDZU2U0J0BKB3VFRCGAVPXTYSM1ZXAWBWG0AJRQMFPE1E44Z';
+  const clientId = { foursquare };
+  const clientSecret = { foursquare };
   const markerRef = useRef(null);
   const [locationName, setLocationName] = useState('');
 

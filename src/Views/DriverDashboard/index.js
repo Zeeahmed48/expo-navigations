@@ -188,7 +188,7 @@ const DriverDashboard = ({ driver }) => {
                 lineDashPattern={[0]}
                 origin={region}
                 destination={dropOffPoint}
-                apikey='AIzaSyCtMCLg_zFHKO7we7DaNJUFCYzXdqAcPs4' // insert your API Key here
+                apikey={API_KEY} // insert your API Key here
                 strokeWidth={4}
                 strokeColor='#e2b052'
               />
